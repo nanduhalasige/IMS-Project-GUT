@@ -1,0 +1,264 @@
+<link
+  rel="stylesheet"
+  href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+  integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
+  crossorigin="anonymous"
+/>
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+/>
+<script
+  src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+  integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+  crossorigin="anonymous"
+></script>
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
+  integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+  crossorigin="anonymous"
+></script>
+<script
+  src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"
+  integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
+  crossorigin="anonymous"
+></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/latest/TweenMax.min.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/series-label.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+<script src="https://code.highcharts.com/modules/export-data.js"></script>
+<script src="https://code.highcharts.com/modules/accessibility.js"></script>
+
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+  integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+  crossorigin=""
+/>
+
+<script
+  src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+  integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+  crossorigin=""
+></script>
+
+<style>
+  #container {
+    height: 100%;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  #mapid {
+    height: 100%;
+    width: 100%;
+  }
+
+  ul,
+  #myUL {
+    list-style-type: none;
+  }
+
+  #myUL {
+    margin: 0;
+    padding: 0;
+  }
+
+  .caret {
+    cursor: pointer;
+    -webkit-user-select: none; /* Safari 3.1+ */
+    -moz-user-select: none; /* Firefox 2+ */
+    -ms-user-select: none; /* IE 10+ */
+    user-select: none;
+  }
+
+  .caret::before {
+    content: "\25B6";
+    color: black;
+    display: inline-block;
+    margin-right: 6px;
+  }
+
+  .caret-down::before {
+    -ms-transform: rotate(90deg); /* IE 9 */
+    -webkit-transform: rotate(90deg); /* Safari */
+    transform: rotate(90deg);
+  }
+
+  .nested {
+    display: none;
+  }
+
+  .active {
+    display: block;
+  }
+</style>
+
+<figure class="highcharts-figure m-3">
+  <div id="container">
+    <div id="mapid"></div>
+    <div id="linechart" class="mt-4"></div>
+    <div class="mt-4 mb-4 m-4">
+      <h2>List Router under each Groups</h2>
+      <ul id="myUL">
+        <li>
+          <span class="caret">Router Groups</span>
+          <ul class="nested first-stage" id="first-stage"></ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+</figure>
+
+<script>
+  fetch(
+    "https://x5g1vdnys6.execute-api.us-east-1.amazonaws.com/default/getHotspots"
+  )
+    .then(response => {
+      return response.json();
+    })
+    .then(data => {
+      createMap(data);
+      renderGroups(data);
+      createToggleEvent();
+    });
+
+  createMap = data => {
+    var mymap = L.map("mapid").setView([54.3612063, 18.5499424], 11);
+
+    L.tileLayer(
+      "https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
+      {
+        attribution:
+          'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+        maxZoom: 18,
+        minWidth: "100%",
+        id: "mapbox/streets-v11",
+        accessToken:
+          "pk.eyJ1IjoibmFuZHVoYWxhc2lnZSIsImEiOiJjazY3dm1uYTAxY20xM2dvNzcxaHdrOWF4In0.P_UcE5Z8DsobdV7A0u6qWA"
+      }
+    ).addTo(mymap);
+
+    data.forEach(item => {
+      var router = item["routers"];
+
+      router.forEach((el, i) => {
+        if (i === 0) {
+          L.circle([el["coordinate"][0], el["coordinate"][1]], {
+            color: "red",
+            fillColor: "#f03",
+            fillOpacity: 0.5,
+            radius: 3000
+          })
+            .addTo(mymap)
+            .bindPopup("Center router </br>" + el["name"])
+            .openPopup();
+        }
+        L.marker([el["coordinate"][0], el["coordinate"][1]]).addTo(mymap);
+
+        // temp["data"].push({ x: el["coordinate"][0], y: el["coordinate"][1] });
+      });
+    });
+
+    plotLineChart(data);
+  };
+
+  plotLineChart = data => {
+    var seriesData = [];
+    var datalength = data.length;
+    data.forEach(item => {
+      var router = item["routers"];
+      seriesData.push(router.length);
+    });
+
+    Highcharts.chart("linechart", {
+      title: {
+        text: "Router distribution in tricity"
+      },
+
+      yAxis: {
+        title: {
+          text: "Number of Routers in group"
+        }
+      },
+
+      xAxis: {
+        accessibility: {
+          rangeDescription: "Range: 1 to " + datalength
+        }
+      },
+
+      legend: {
+        layout: "vertical",
+        align: "right",
+        verticalAlign: "middle"
+      },
+
+      plotOptions: {
+        series: {
+          label: {
+            connectorAllowed: false
+          },
+          pointStart: 1
+        }
+      },
+
+      series: [
+        {
+          name: "Routers",
+          data: seriesData
+        }
+      ],
+      responsive: {
+        rules: [
+          {
+            condition: {
+              maxWidth: 500
+            },
+            chartOptions: {
+              legend: {
+                layout: "horizontal",
+                align: "center",
+                verticalAlign: "bottom"
+              }
+            }
+          }
+        ]
+      }
+    });
+  };
+
+  renderGroups = data => {
+    var accordianStr = "";
+    data.forEach((el, i) => {
+      var router = el["routers"];
+      accordianStr +=
+        '<li><span class="caret">' +
+        el["group_Name"] +
+        ' (Center Router)</span><ul class="nested">';
+      router.forEach((item, i) => {
+        var num = i + 1;
+        accordianStr +=
+          "<li> <i class='fa fa-wifi'></i> " + item["name"] + "</li>";
+      });
+      accordianStr += "</ul></li>";
+    });
+
+    var node = document.createElement("LI");
+    node.innerHTML = accordianStr;
+    document.getElementById("first-stage").appendChild(node);
+  };
+
+  createToggleEvent = () => {
+    var toggler = document.getElementsByClassName("caret");
+    var i;
+
+    for (i = 0; i < toggler.length; i++) {
+      toggler[i].addEventListener("click", function() {
+        this.parentElement.querySelector(".nested").classList.toggle("active");
+        this.classList.toggle("caret-down");
+      });
+    }
+  };
+</script>
